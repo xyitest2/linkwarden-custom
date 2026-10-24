@@ -6,7 +6,7 @@ WORKDIR /tmp
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
     mkdir -p /etc/apt/keyrings
 
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - sudo apt-get install -y nodejs
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - apt-get install -y nodejs
 
 # === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
 FROM ghcr.io/linkwarden/linkwarden:latest
