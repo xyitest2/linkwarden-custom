@@ -5,11 +5,17 @@ on:
     - cron: '0 3 * * *' # Automatyczny start codziennie o 3:00 w nocy
   workflow_dispatch: # Tworzy wygodny przycisk do ręcznego uruchomienia
 
+# JAWNE UPRAWNIENIA: Wyraźnie informujemy system GitHub, że ten skrypt 
+# ma prawo czytać kod oraz zapisywać gotowe obrazy w rejestrze pakietów (packages).
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Pobranie kodu Linkwardena (Zaktualizowana wersja)
+      - name: Pobranie kodu Linkwardena
         uses: actions/checkout@v4.2.2
         with:
           repository: 'linkwarden/linkwarden'
@@ -27,7 +33,9 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          # Używamy wbudowanego tokenu GITHUB_TOKEN, który dzięki sekcji 'permissions' wyżej
+          # ma teraz pełne prawa zapisu bez polegania na zewnętrznych kluczach.
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Budowanie i wysyłka na zdalny rejestr
         uses: docker/build-push-action@v6.9.0
