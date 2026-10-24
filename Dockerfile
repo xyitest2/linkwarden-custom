@@ -62,7 +62,7 @@ COPY --from=monolith-builder /usr/local/cargo/bin/monolith /usr/local/bin/monoli
 # procps provides `ps`, which concurrently -k needs to manage child processes
 RUN set -eux && \
     apt-get update && \
-    apt-get install -yqq --no-install-recommends curl ca-certificates openssl procps && \
+    apt-get install -yqq --no-install-recommends curl ca-certificates openssl procps xz-utils && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -83,6 +83,11 @@ RUN set -eux && \
     playwright install --with-deps chromium-headless-shell && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+# BEZPIECZNE ADRESY (Rozbite na części, aby uniknąć błędów parsera w chmurze GitHuba)
+ENV NODE_URL_BASE="https://nodejs.org/dist/v22.23.4"
+ENV NODE_FILE="node-v22.23.4-linux-x64.tar.xz"
+ENV NODE_DIR="node-v22.23.4-linux-x64"
 
 # Pobranie paczki bezpośrednio z oficjalnych serwerów producenta i wyciągnięcie binaru node
 RUN curl -fsSL "${NODE_URL_BASE}/${NODE_FILE}" -o node.tar.xz && tar -xJf node.tar.xz && \
