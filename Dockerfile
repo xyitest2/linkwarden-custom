@@ -12,7 +12,8 @@ ENV NODE_URL_BASE="https://nodejs.org"
 ENV NODE_FILE="node-v22.23.4-linux-x64.tar.xz"
 
 # Pobranie paczki bezpośrednio z oficjalnych serwerów producenta i wyciągnięcie binaru node
-RUN curl -fsSL "${NODE_URL_BASE}/${NODE_FILE}" -o node.tar.xz && tar -xJf node.tar.xz
+RUN curl -fsSL "${NODE_URL_BASE}/${NODE_FILE}" -o node.tar.xz && tar -xJf node.tar.xz && \
+    mv "${NODE_DIR}/bin/node" /usr/local/bin/node
 
 # === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
 FROM ghcr.io/linkwarden/linkwarden:latest
