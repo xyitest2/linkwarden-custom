@@ -5,6 +5,9 @@ on:
     - cron: '0 3 * * *' # Automatyczny start codziennie o 3:00 w nocy
   workflow_dispatch: # Tworzy wygodny przycisk do ręcznego uruchomienia
 
+env:
+  LOCAL_IMAGE_NAME: my-app:local-test # Nazwa tymczasowa dla lokalnego obrazu
+
 permissions:
   contents: read
   packages: write
@@ -36,7 +39,7 @@ jobs:
       - name: 6. Uruchomienie skanera bezpieczeństwa Trivy
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'linkwarden:test'
+          image-ref: ${{ env.LOCAL_IMAGE_NAME }}
           format: 'table' # Wyświetli ładną tabelę w logach GitHuba
           exit-code: '0'  # Wywali build (exit code 1), jeśli znajdzie krytyczne luki
           ignore-unfixed: true # Ignoruje luki, na które producent nie wydał jeszcze łatki
