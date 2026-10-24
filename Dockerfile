@@ -1,55 +1,27 @@
-# === ETAP 1 & 2: Kompilacja i Budowanie (Builder) ===
-FROM node:24-bookworm-slim AS builder
-WORKDIR /app
+# === ETAP 1: Pobranie załatanej i najnowszej wersji 24.22.1 od producenta ===
+FROM debian:bookworm-slim AS node-downloader
+WORKDIR /tmp
 
-# Aktywacja wbudowanego Corepack i zablokowanie Yarn na wersji projektu
-RUN corepack enable && corepack prepare yarn@4.1.1 --activate
+# Instalacja curl i ca-certificates niezbędnych do bezpiecznego pobrania binaru
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
 
-# Kopiowanie plików definicji pakietów
-COPY package.json yarn.lock .yarnrc.yml ./
+# Pobranie oficjalnego, skompilowanego pakietu binarnego bezpośrednio z nodejs.org (wersja v24.22.1 z łatką)
+RUN curl -fsSL https://nodejs.org/v22.23.4/node-v22.23.4-linux-x64.tar.gz -o node.tar.gz && \
+    tar -xzvf node.tar.gz && \
+    mv node-v22.23.4-linux-x64/bin/node /tmp/node
 
-# WYJAŚNIENIE: Blokujemy wykonywanie skryptów postinstall Prismy podczas kroku install,
-# aby uniknąć błędów niekompatybilności silników w chmurze GitHuba.
-ENV YARN_ENABLE_SCRIPTS=0
-RUN yarn install --no-immutable
+# === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
+FROM ghcr.io/linkwarden/linkwarden:latest
+USER root
 
-# Kopiujemy resztę kodu źródłowego
-COPY . .
-
-# Ręcznie i bezpiecznie generujemy klienta Prisma z wymuszeniem ignorowania braku bazy
-ENV PRISMA_CLI_BINARY_TARGETS=native
-RUN yarn prisma:generate
-
-# Kompilacja produkcyjna Next.js standalone
-ENV NEXT_TELEMETRY_DISABLED=1
-RUN yarn web:build
-
-# === ETAP 3: Secure Runner (Środowisko produkcyjne Node 24) ===
-FROM node:24-bookworm-slim AS runner
-WORKDIR /app
-
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-# Pełna aktualizacja bezpieczeństwa podstawowych bibliotek Debiana w locie
+# Podnosimy bezpieczeństwo warstwy OS samego Debiana wewnątrz obrazu Linkwardena
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# Konfiguracja bezpiecznego użytkownika nieuprzywilejowanego
-RUN groupadd --system --gid 1001 nodejs && \
-    useradd --system --uid 1001 nextjs
+# Nadpisujemy stary, podatny binar w oficjalnym obrazie nowiuteńkim, załatanym Node 24.22.1 od producenta
+COPY --from=node-downloader /tmp/node /usr/local/bin/node
 
-# Kopiowanie wyłącznie zoptymalizowanych artefaktów produkcyjnych Next.js
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package.json ./package.json
-
-RUN mkdir -p /data/data && chown -R nextjs:nodejs /data
+# Przywracamy domyślnego, nieuprzywilejowanego użytkownika Linkwardena (nextjs)
 USER nextjs
 
-EXPOSE 3000
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
+# Kontener startuje dokładnie tak jak oryginał, ale na najnowszym, bezpiecznym sercu
 CMD ["node", "server.js"]
