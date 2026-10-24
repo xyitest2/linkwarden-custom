@@ -21,4 +21,4 @@ RUN groupadd --system --gid 1001 nodejs || true && \
 WORKDIR /app
 USER nextjs
 
-CMD ["node", "server.js"]
+CMD ["node", "apps/web/server.js"]
