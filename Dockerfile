@@ -1,5 +1,4 @@
 # === ETAP 1 & 2: Budowanie i Kompilacja (Builder na Debian-slim) ===
-# Wykorzystujemy wersję slim, która posiada biblioteki glibc potrzebne dla Yarn v4
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
@@ -8,7 +7,10 @@ RUN corepack enable
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-# Pobieramy i instalujemy zależności (flaga --no-immutable zapobiega konfliktom wersji)
+# ZMIANA: Wyłączamy wykonywanie skryptów postinstall, które blokują build na nowym Node
+ENV YARN_ENABLE_SCRIPTS=0
+
+# Pobieramy i instalujemy zależności bez wymuszania niezmienności cache
 RUN yarn install --no-immutable
 
 COPY . .
@@ -22,8 +24,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# 1. Konfigurujemy oficjalne i bezpieczne źródło NodeSource dla Node v22
-# 2. Instalujemy najnowszą, załataną wersję Node.js za pomocą apt-get, eliminując luki z Debiana
+# Konfigurujemy oficjalne i bezpieczne źródło NodeSource dla Node v22
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://nodesource.com | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
@@ -37,7 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
-# Kopiowanie czystego kodu produkcyjnego standalone (bez narzędzi dev)
+# Kopiowanie czystego kodu produkcyjnego standalone
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
