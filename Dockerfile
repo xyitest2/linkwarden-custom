@@ -1,23 +1,23 @@
-# === ETAP 1 & 2: Pełna kompilacja (Builder z narzędziami systemowymi) ===
+# === ETAP 1 & 2: Pełna kompilacja (Builder na Debianie z podstawowymi narzędziami) ===
 FROM node:22-bookworm AS builder
 WORKDIR /app
 
-# Instalujemy python3 i podstawowe narzędzia budowania dla binarów C++/esbuild
-RUN apt-get update && apt-get install -y python3 make g++ gcc libpixman-1-dev cairo-dev pango-dev git && rm -rf /var/lib/apt/lists/*
+# Instalujemy czyste, uniwersalne pakiety kompilatora C++ i Pythona dla Debiana
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3 git && rm -rf /var/lib/apt/lists/*
 
 # Włączamy corepack i aktywujemy dokładnie tę wersję Yarn, którą wymusza projekt
 RUN corepack enable && corepack prepare yarn@4.1.1 --activate
 
 COPY package.json yarn.lock .yarnrc.yml ./
 
-# Pobieramy i instalujemy zależności (flaga --no-immutable pozwala na adaptację)
+# Pobieramy i instalujemy zależności 
 RUN yarn install --no-immutable
 
 COPY . .
 RUN yarn prisma:generate
 RUN yarn web:build
 
-# === ETAP 3: Secure Runner (Czyste środowisko produkcyjne z NodeSource) ===
+# === ETAP 3: Secure Runner (Środowisko produkcyjne z NodeSource) ===
 FROM debian:bookworm-slim AS runner
 WORKDIR /app
 
