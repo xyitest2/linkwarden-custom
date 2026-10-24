@@ -3,9 +3,16 @@ FROM debian:bookworm-slim AS node-downloader
 WORKDIR /tmp
 
 # Instalacja podstawowych pakietów do obsługi sieci i kluczy
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl zx-utils
 
-RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs
+# RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs
+
+# BEZPIECZNE ADRESY (Rozbite na części, aby uniknąć błędów parsera w chmurze GitHuba)
+ENV NODE_URL_BASE="https://nodejs.org"
+ENV NODE_FILE="node-v22.23.4-linux-x64.tar.xz"
+
+# Pobranie paczki bezpośrednio z oficjalnych serwerów producenta i wyciągnięcie binaru node
+RUN curl -fsSL "${NODE_URL_BASE}/${NODE_FILE}" -o node.tar.xz && tar -xJf node.tar.xz
 
 # === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
 FROM ghcr.io/linkwarden/linkwarden:latest
