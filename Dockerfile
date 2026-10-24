@@ -1,8 +1,12 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
+
+# Włączamy corepack, który automatycznie pobierze właściwą wersję Yarn bez szukania lokalnego folderu .yarn
 RUN corepack enable
+
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
+
+# Zależności instalujemy bezpośrednio z pamięci sieciowej Yarn
 RUN yarn install --immutable
 COPY . .
 RUN yarn prisma:generate
