@@ -6,16 +6,7 @@ WORKDIR /tmp
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
     mkdir -p /etc/apt/keyrings
 
-# KROK A: Pobranie klucza GPG (Użyj Części 1)
-RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-
-# KROK B: Dodanie repozytorium do źródeł APT (Użyj Części 2 i 3)
-RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com bookwarm main" > /etc/apt/sources.list.d/nodesource.list
-
-# KROK C: Aktualizacja i instalacja najnowszego Node.js z repozytorium
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends nodejs && \
-    cp /usr/bin/node /tmp/node
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - sudo apt-get install -y nodejs
 
 # === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
 FROM ghcr.io/linkwarden/linkwarden:latest
