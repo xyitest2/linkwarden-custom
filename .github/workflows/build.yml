@@ -5,8 +5,6 @@ on:
     - cron: '0 3 * * *' # Automatyczny start codziennie o 3:00 w nocy
   workflow_dispatch: # Tworzy wygodny przycisk do ręcznego uruchomienia
 
-# JAWNE UPRAWNIENIA: Wyraźnie informujemy system GitHub, że ten skrypt 
-# ma prawo czytać kod oraz zapisywać gotowe obrazy w rejestrze pakietów (packages).
 permissions:
   contents: read
   packages: write
@@ -15,31 +13,36 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Pobranie kodu Linkwardena
+      - name: 1. Pobranie Twojego bezpiecznego Dockerfile
+        uses: actions/checkout@v4.2.2
+        with:
+          path: 'moje-repo' # Zapisuje Twoje pliki w osobnym podfolderze
+
+      - name: 2. Pobranie kodu źródłowego Linkwardena
         uses: actions/checkout@v4.2.2
         with:
           repository: 'linkwarden/linkwarden'
           ref: 'main'
+          path: 'linkwarden-src' # Zapisuje kod Linkwardena w osobnym podfolderze
 
-      - name: Podmiana pliku Dockerfile na nasz bezpieczny
+      - name: 3. Przeniesienie bezpiecznego Dockerfile do kodu aplikacji
         run: |
-          curl -fsSL https://githubusercontent.com{{ github.repository }}/main/Dockerfile -o Dockerfile
+          cp moje-repo/Dockerfile linkwarden-src/Dockerfile
 
-      - name: Konfiguracja silnika Docker Buildx
+      - name: 4. Konfiguracja silnika Docker Buildx
         uses: docker/setup-buildx-action@v3.8.0
 
-      - name: Logowanie do GitHub Container Registry
+      - name: 5. Logowanie do GitHub Container Registry
         uses: docker/login-action@v3.3.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          # Używamy wbudowanego tokenu GITHUB_TOKEN, który dzięki sekcji 'permissions' wyżej
-          # ma teraz pełne prawa zapisu bez polegania na zewnętrznych kluczach.
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Budowanie i wysyłka na zdalny rejestr
+      - name: 6. Budowanie i wysyłka na zdalny rejestr
         uses: docker/build-push-action@v6.9.0
         with:
-          context: .
+          context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
+          file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/linkwarden:alpinebased
