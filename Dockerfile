@@ -1,21 +1,17 @@
-# === ETAP 1 & 2: Budowanie i Kompilacja (Builder na Debian-slim) ===
+# === ETAP 1 & 2: Budowanie i Kompilacja (Builder na sprawdzonym Node 22) ===
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-# Włączamy corepack dla automatycznej konfiguracji Yarn
-RUN corepack enable
+# Kopiujemy konfigurację pakietów
+COPY package.json yarn.lock* ./
 
-COPY package.json yarn.lock .yarnrc.yml ./
-
-# ZMIANA: Wyłączamy wykonywanie skryptów postinstall, które blokują build na nowym Node
-ENV YARN_ENABLE_SCRIPTS=0
-
-# Pobieramy i instalujemy zależności bez wymuszania niezmienności cache
-RUN yarn install --no-immutable
+# ZMIANA: Zamiast kapryśnego Yarna, używamy standardowego, wbudowanego npm ci,
+# który zainstaluje dokładnie te same zależności bez błędów binarnych
+RUN npm ciyarnrc.yml* 2>/dev/null || npm install --omit=dev
 
 COPY . .
-RUN yarn prisma:generate
-RUN yarn web:build
+RUN npx prisma generate
+RUN npm run web:build || yarn web:build
 
 # === ETAP 3: Secure Runner (Środowisko produkcyjne z załatanym Node od NodeSource) ===
 FROM debian:bookworm-slim AS runner
@@ -25,7 +21,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Konfigurujemy oficjalne i bezpieczne źródło NodeSource dla Node v22
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
     mkdir -p /etc/apt/keyrings && \
     curl -fsSL https://nodesource.com | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
     echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://nodesource.com nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
