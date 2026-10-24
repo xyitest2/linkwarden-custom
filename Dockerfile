@@ -3,7 +3,7 @@ FROM debian:bookworm-slim AS node-downloader
 WORKDIR /tmp
 
 # Instalacja curl i ca-certificates niezbędnych do bezpiecznego pobrania binaru
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils && rm -rf /var/lib/apt/lists/*
 
 # Pobranie oficjalnego, skompilowanego pakietu binarnego bezpośrednio z nodejs.org (wersja v24.22.1 z łatką)
 RUN curl -fsSL https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz -o node.tar.xz && \
