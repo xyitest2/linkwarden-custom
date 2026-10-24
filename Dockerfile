@@ -1,21 +1,23 @@
-# === ETAP 1 & 2: Budowanie i Kompilacja (Builder na Debian-slim) ===
-FROM node:22-bookworm-slim AS builder
+# === ETAP 1 & 2: Pełna kompilacja (Builder z narzędziami systemowymi) ===
+FROM node:22-bookworm AS builder
 WORKDIR /app
 
-# Włączamy corepack i jawnie wskazujemy wersję Yarn, której wymaga Linkwarden
+# Instalujemy python3 i podstawowe narzędzia budowania dla binarów C++/esbuild
+RUN apt-get update && apt-get install -y python3 make g++ gcc libpixman-1-dev cairo-dev pango-dev git && rm -rf /var/lib/apt/lists/*
+
+# Włączamy corepack i aktywujemy dokładnie tę wersję Yarn, którą wymusza projekt
 RUN corepack enable && corepack prepare yarn@4.1.1 --activate
 
-# Kopiujemy dokładnie te pliki, których Yarn v4 potrzebuje do instalacji
 COPY package.json yarn.lock .yarnrc.yml ./
 
-# Pobieramy i instalujemy zależności (flaga --no-immutable zapobiega konfliktom)
+# Pobieramy i instalujemy zależności (flaga --no-immutable pozwala na adaptację)
 RUN yarn install --no-immutable
 
 COPY . .
 RUN yarn prisma:generate
 RUN yarn web:build
 
-# === ETAP 3: Secure Runner (Środowisko produkcyjne z załatanym Node od NodeSource) ===
+# === ETAP 3: Secure Runner (Czyste środowisko produkcyjne z NodeSource) ===
 FROM debian:bookworm-slim AS runner
 WORKDIR /app
 
