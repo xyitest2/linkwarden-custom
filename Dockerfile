@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 RUN curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
 
 # KROK B: Dodanie repozytorium do źródeł APT (Użyj Części 2 i 3)
-RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com nodistro main" > /etc/apt/sources.list.d/nodesource.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com bookwarm main" > /etc/apt/sources.list.d/nodesource.list
 
 # KROK C: Aktualizacja i instalacja najnowszego Node.js z repozytorium
 RUN apt-get update && \
