@@ -1,4 +1,4 @@
-name: Zdalny Build Bezpiecznego Obrazu
+name: Linkwarden personal docker build
 
 on:
   schedule:
