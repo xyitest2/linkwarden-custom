@@ -1,17 +1,19 @@
-# === ETAP 1 & 2: Budowanie i Kompilacja (Builder na sprawdzonym Node 22) ===
+# === ETAP 1 & 2: Budowanie i Kompilacja (Builder na Debian-slim) ===
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
-# Kopiujemy konfigurację pakietów
-COPY package.json yarn.lock* ./
+# Włączamy corepack i jawnie wskazujemy wersję Yarn, której wymaga Linkwarden
+RUN corepack enable && corepack prepare yarn@4.1.1 --activate
 
-# ZMIANA: Zamiast kapryśnego Yarna, używamy standardowego, wbudowanego npm ci,
-# który zainstaluje dokładnie te same zależności bez błędów binarnych
-RUN npm ciyarnrc.yml* 2>/dev/null || npm install --omit=dev
+# Kopiujemy dokładnie te pliki, których Yarn v4 potrzebuje do instalacji
+COPY package.json yarn.lock .yarnrc.yml ./
+
+# Pobieramy i instalujemy zależności (flaga --no-immutable zapobiega konfliktom)
+RUN yarn install --no-immutable
 
 COPY . .
-RUN npx prisma generate
-RUN npm run web:build || yarn web:build
+RUN yarn prisma:generate
+RUN yarn web:build
 
 # === ETAP 3: Secure Runner (Środowisko produkcyjne z załatanym Node od NodeSource) ===
 FROM debian:bookworm-slim AS runner
@@ -35,7 +37,7 @@ RUN apt-get update && \
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
-# Kopiowanie czystego kodu produkcyjnego standalone
+# Kopiowanie czystego kodu produkcyjnego standalone (Next.js)
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
