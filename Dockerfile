@@ -14,8 +14,8 @@ USER root
 # Podnosimy bezpieczeństwo warstwy OS (Debian) w oficjalnym obrazie
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
-# Nadpisujemy stary, podatny binar nową, automatycznie pobraną wersją z NodeSource
-# COPY --from=node-downloader /tmp/node /usr/local/bin/node
+RUN groupadd --system --gid 1001 nodejs || true && \
+    useradd --system --uid 1001 --gid nodejs nextjs || true
 
 # Przywracamy domyślnego, nieuprzywilejowanego użytkownika Linkwardena
 USER nextjs
