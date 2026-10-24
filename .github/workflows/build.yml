@@ -45,4 +45,4 @@ jobs:
           context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
           file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:alpinebased
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
