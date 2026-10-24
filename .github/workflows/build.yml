@@ -34,6 +34,8 @@ jobs:
 
       - name: 4. Konfiguracja silnika Docker Buildx
         uses: docker/setup-buildx-action@v3.8.0
+        with:
+          driver: docker
 
       # JAWNY KROK TRIVY: Oficjalna akcja od Aqua Security skanuje przed chwilą zbudowany obraz
       - name: 6. Uruchomienie skanera bezpieczeństwa Trivy
