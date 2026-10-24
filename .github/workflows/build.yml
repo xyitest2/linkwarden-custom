@@ -34,7 +34,7 @@ jobs:
 
       # JAWNY KROK TRIVY: Oficjalna akcja od Aqua Security skanuje przed chwilą zbudowany obraz
       - name: 6. Uruchomienie skanera bezpieczeństwa Trivy
-        uses: aquasecurity/trivy-action@v1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'linkwarden:test'
           format: 'table' # Wyświetli ładną tabelę w logach GitHuba
