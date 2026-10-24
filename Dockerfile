@@ -1,27 +1,41 @@
-# === ETAP 1: Pobranie załatanej i najnowszej wersji 24.22.1 od producenta ===
-FROM debian:bookworm-slim AS node-downloader
+# === ETAP 1: Pobranie załatanej binarki MUSL bezpośrednio od producenta ===
+FROM alpine:3.20 AS node-downloader
 WORKDIR /tmp
 
-# Instalacja curl i ca-certificates niezbędnych do bezpiecznego pobrania binaru
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl xz-utils && rm -rf /var/lib/apt/lists/*
+# Instalacja curl i xz do rozpakowania paczki .tar.xz w Alpine
+RUN apk add --no-cache curl xz
 
-# Pobranie oficjalnego, skompilowanego pakietu binarnego bezpośrednio z nodejs.org (wersja v24.22.1 z łatką)
-RUN curl -fsSL https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64.tar.xz -o node.tar.xz && \
+# Pobranie oficjalnego pakietu binarnego dedykowanego dla Alpine (linux-x64-musl)
+RUN curl -fsSL https://nodejs.org/dist/v22.23.4/node-v22.23.4-linux-x64-musl.tar.xz -o node.tar.xz && \
     tar -xJf node.tar.xz && \
-    mv node-v22.23.4-linux-x64/bin/node /tmp/node
+    mv node-v22.23.4-linux-x64-musl/bin/node /tmp/node
 
-# === ETAP 2: Chirurgia i wstrzyknięcie binaru do oficjalnego Linkwardena ===
-FROM ghcr.io/linkwarden/linkwarden:latest
-USER root
+# === ETAP 2: Budowanie czystego obrazu Alpine z aplikacją Linkwarden ===
+FROM alpine:3.20 AS runner
+WORKDIR /app
 
-# Podnosimy bezpieczeństwo warstwy OS samego Debiana wewnątrz obrazu Linkwardena
-RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Nadpisujemy stary, podatny binar w oficjalnym obrazie nowiuteńkim, załatanym Node 24.22.1 od producenta
+# Aktualizacja pakietów systemowych Alpine do najwyższych, bezpiecznych wersji
+RUN apk update && apk upgrade --no-cache
+
+# Kopiujemy całą, gotową strukturę aplikacji z oficjalnego obrazu Linkwardena
+# Dzięki temu pomijamy Yarn PnP, Prisma i błędy kompilacji w chmurze
+COPY --from=ghcr.io/linkwarden/linkwarden:latest /app ./
+
+# Wstrzykujemy nową, załataną binarkę Node (musl) od producenta do naszego Alpine
 COPY --from=node-downloader /tmp/node /usr/local/bin/node
 
-# Przywracamy domyślnego, nieuprzywilejowanego użytkownika Linkwardena (nextjs)
+# Odtworzenie oficjalnej struktury uprawnień użytkownika nieuprzywilejowanego w Alpine
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs && \
+    mkdir -p /data/data && chown -R nextjs:nodejs /data
+
 USER nextjs
 
-# Kontener startuje dokładnie tak jak oryginał, ale na najnowszym, bezpiecznym sercu
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
 CMD ["node", "server.js"]
