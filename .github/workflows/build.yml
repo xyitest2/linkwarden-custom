@@ -1,0 +1,34 @@
+name: Zdalny Build Bezpiecznego Obrazu
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Automatyczny start codziennie o 3:00 w nocy
+  workflow_dispatch: # Tworzy wygodny przycisk do ręcznego uruchomienia
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobranie kodu Linkwardena
+        uses: actions/checkout@v4
+        with:
+          repository: 'linkwarden/linkwarden'
+          ref: 'main'
+
+      - name: Podmiana pliku Dockerfile na nasz bezpieczny
+        run: |
+          curl -fsSL https://githubusercontent.com{{ github.repository }}/main/Dockerfile -o Dockerfile
+
+      - name: Logowanie do GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Budowanie i wysyłka na zdalny rejestr
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:alpinebased
