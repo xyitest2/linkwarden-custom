@@ -15,7 +15,7 @@ USER root
 RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*
 
 # Nadpisujemy stary, podatny binar nową, automatycznie pobraną wersją z NodeSource
-COPY --from=node-downloader /tmp/node /usr/local/bin/node
+# COPY --from=node-downloader /tmp/node /usr/local/bin/node
 
 # Przywracamy domyślnego, nieuprzywilejowanego użytkownika Linkwardena
 USER nextjs
