@@ -1,41 +1,45 @@
-# === ETAP 1 & 2: Pełna kompilacja (Builder na Debianie z podstawowymi narzędziami) ===
-FROM node:22-bookworm AS builder
+# === ETAP 1 & 2: Pełna kompilacja (Builder z oficjalnym Node 24) ===
+# Korzystamy z obrazu przygotowanego przez zespół Node.js, który zawiera najnowsze binarie
+FROM node:24-bookworm AS builder
 WORKDIR /app
 
-# Instalujemy czyste, uniwersalne pakiety kompilatora C++ i Pythona dla Debiana
+# Instalujemy podstawowe kompilatory dla binarów C++/esbuild
 RUN apt-get update && apt-get install -y --no-install-recommends build-essential python3 git && rm -rf /var/lib/apt/lists/*
 
-# Włączamy corepack i aktywujemy dokładnie tę wersję Yarn, którą wymusza projekt
-RUN corepack enable && corepack prepare yarn@4.1.1 --activate
+# Włączamy corepack i instalujemy zależności Yarn
+RUN corepack enable
 
 COPY package.json yarn.lock .yarnrc.yml ./
-
-# Pobieramy i instalujemy zależności 
 RUN yarn install --no-immutable
 
 COPY . .
 RUN yarn prisma:generate
 RUN yarn web:build
 
-# === ETAP 3: Secure Runner (Środowisko produkcyjne z NodeSource) ===
+# === ETAP 3: Secure Runner (Środowisko produkcyjne bez podatności Node) ===
+# Zaczynamy od czystego, odchudzonego systemu Debian
 FROM debian:bookworm-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Konfigurujemy oficjalne i bezpieczne źródło NodeSource dla Node v22
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg && \
-    mkdir -p /etc/apt/keyrings && \
-    curl -fsSL https://nodesource.com | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
-    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://nodesource.com nodistro main" > /etc/apt/sources.list.d/nodesource.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends nodejs && \
-    apt-get upgrade -y && \
+# Aktualizujemy TYLKO biblioteki systemowe bazy OS (np. OpenSSL) za pomocą apt-get.
+# NIE instalujemy stąd Node.js!
+RUN echo "deb http://debian.org bookworm main" > /etc/apt/sources.list && \
+    echo "deb http://debian.org-security bookworm-security main" >> /etc/apt/sources.list && \
+    apt-get update && apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Odtworzenie oficjalnej struktury uprawnień użytkownika nieuprzywilejowanego
+# KLUCZOWY KROK: Kopiujemy oficjalny, w 100% załatany binar Node.js 24 bezpośrednio 
+# z etapu builder (stworzonego przez zespół Node.js), całkowicie ignorując brak paczek w Debianie!
+COPY --from=builder /usr/local/bin/node /usr/local/bin/node
+COPY --from=builder /usr/local/include/node /usr/local/include/node
+COPY --from=builder /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/bin/node /usr/local/bin/node-app
+
+# Odtworzenie struktury użytkowników Linkwardena
 RUN groupadd --system --gid 1001 nodejs && \
     useradd --system --uid 1001 nextjs
 
@@ -53,4 +57,5 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+# Uruchomienie za pomocą bezpiecznego, skopiowanego binaru Node.js
 CMD ["node", "server.js"]
