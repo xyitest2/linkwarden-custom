@@ -18,7 +18,11 @@ RUN groupadd --system --gid 1001 nodejs || true && \
     useradd --system --uid 1001 --gid nodejs nextjs || true
 
 # Przywracamy domyślnego, nieuprzywilejowanego użytkownika Linkwardena
-WORKDIR /app
+WORKDIR /app/apps/web
 USER nextjs
 
-CMD ["node", "apps/web/server.js"]
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
