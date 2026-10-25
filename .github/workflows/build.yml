@@ -44,5 +44,21 @@ jobs:
         with:
           context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
           file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
-          push: true
+          push: false
+          load: true
           tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+
+      # NOWY KROK: Trivy skanuje lokalnie załadowany obraz
+      - name: 7. Skanowanie bezpieczeństwa narzędziem Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/linkwarden:patched'
+          format: 'table'
+          exit-code: '1'             # Zgłoś błąd i przerwij workflow, jeśli znajdziesz podatności
+          ignore-unfixed: true       # Ignoruj luki, które nie mają jeszcze oficjalnej łatki naprawczej
+          severity: 'CRITICAL,HIGH'  # Skup się wyłącznie na krytycznych i wysokich zagrożeniach
+
+      # NOWY KROK: Jeśli test Trivy przejdzie pomyślnie, wysyłamy sprawdzony obraz do rejestru ghcr.io
+      - name: 8. Wysyłka bezpiecznego obrazu na zdalny rejestr
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
