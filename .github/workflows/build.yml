@@ -13,7 +13,19 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. Pobranie Twojego bezpiecznego Dockerfile
+      # KROK NAPRAWCZY 1: Usunięcie zbędnego oprogramowania i śmieci z runnera GitHub przed startem
+      - name: 🛠️ Sprzątanko (kluczowe dla dużych obrazów)
+        run: |
+          echo "Dysk przed czyszczeniem:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          echo "Dysk po czyszczeniu:"
+          df -h
+      - name: 1. Pobranie bezpiecznego Dockerfile
         uses: actions/checkout@v4.2.2
         with:
           path: 'moje-repo' # Zapisuje Twoje pliki w osobnym podfolderze
@@ -39,7 +51,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 6. Budowanie i wysyłka na zdalny rejestr
+      - name: 6. Budowanko
         uses: docker/build-push-action@v6.9.0
         with:
           context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
@@ -48,17 +60,32 @@ jobs:
           load: true
           tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
 
+      # KROK NAPRAWCZY 2: Czyszczenie cache Buildx PRZED skanowaniem Trivy.
+      # Buildx zostawia po sobie gigabajty danych tymczasowych. Musimy je usunąć,
+      # aby Trivy miało miejsce na rozpakowanie warstw obrazu w /tmp.
+      - name: 🧹 Pruning Docker Build Cache
+        run: |
+          docker builder prune -f
+          df -h
+
       # NOWY KROK: Trivy skanuje lokalnie załadowany obraz
       - name: 7. Skanowanie bezpieczeństwa narzędziem Trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: 'ghcr.io/${{ github.repository_owner }}/linkwarden:patched'
-          format: 'table'
+          format: 'sarif' # Zmieniamy z table na sarif
+          output: 'trivy-results.sarif'
           exit-code: '1'             # Zgłoś błąd i przerwij workflow, jeśli znajdziesz podatności
           ignore-unfixed: true       # Ignoruj luki, które nie mają jeszcze oficjalnej łatki naprawczej
           severity: 'CRITICAL,HIGH'  # Skup się wyłącznie na krytycznych i wysokich zagrożeniach
 
+      - name: 8. Przesłanie raportu do zakładki Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # Wyślij raport zawsze, nawet jeśli Trivy znajdzie błędy
+        with:
+          sarif_file: 'trivy-results.sarif'
+
       # NOWY KROK: Jeśli test Trivy przejdzie pomyślnie, wysyłamy sprawdzony obraz do rejestru ghcr.io
-      - name: 8. Wysyłka bezpiecznego obrazu na zdalny rejestr
+      - name: 9. Wysyłka bezpiecznego obrazu na zdalny rejestr
         run: |
           docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
