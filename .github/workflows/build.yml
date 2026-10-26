@@ -77,3 +77,8 @@ jobs:
           file: ./linkwarden-src/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+  # NOWA SEKCJA: Jawne wywołanie drugiego pliku po zakończeniu zadania "build"
+  trigger-trivy:
+    needs: build # Czekaj na zakończenie kompilacji obrazu tymczasowego
+    uses: ./.github/workflows/trivy.yml # Ścieżka lokalna do Twojego drugiego pliku
+    secrets: inherit # Przekaż uprawnienia i token GITHUB_TOKEN do drugiego pliku
