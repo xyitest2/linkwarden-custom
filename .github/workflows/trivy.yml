@@ -1,0 +1,51 @@
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+name: Trivy Security Scan
+
+on:
+  workflow_run:
+    workflows: ["Linkwarden personal docker build"] # MUSI pasować do 'name' z pierwszego pliku
+    types:
+      - completed # Uruchom, gdy tamten plik zakończy działanie
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write # Wymagane, aby przesłać plik SARIF do zakładki Security
+
+jobs:
+  scan-and-upload:
+    runs-on: ubuntu-latest
+    # Kluczowe zabezpieczenie: wykonaj skanowanie TYLKO, jeśli budowanie w pierwszym pliku się udało
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: 1. Logowanie do GitHub Container Registry
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Ponieważ ten workflow działa na ŚWIEŻEJ maszynie wirtualnej, musimy pobrać obraz, który przed chwilą zbudował pierwszy workflow
+      - name: 2. Pobranie zbudowanego obrazu z GHCR cache
+        run: |
+          docker pull ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+
+      - name: 3. Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/linkwarden:patched'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '1' # Jeśli znajdzie luki HIGH/CRITICAL, pipeline oznaczy się jako błąd
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'
+
+      - name: 4. Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
