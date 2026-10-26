@@ -15,17 +15,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # KROK NAPRAWCZY 1: Usunięcie zbędnego oprogramowania i śmieci z runnera GitHub przed startem
-      - name: 🛠️ Sprzątanko (kluczowe dla dużych obrazów)
-        run: |
-          echo "Dysk przed czyszczeniem:"
-          df -h
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force || true
-          echo "Dysk po czyszczeniu:"
-          df -h
+      # - name: 🛠️ Sprzątanko (kluczowe dla dużych obrazów)
+      #  run: |
+      #    echo "Dysk przed czyszczeniem:"
+      #    df -h
+      #    sudo rm -rf /usr/share/dotnet
+      #    sudo rm -rf /usr/local/lib/android
+      #    sudo rm -rf /opt/ghc
+      #    sudo rm -rf /opt/hostedtoolcache/CodeQL
+      #    sudo docker image prune --all --force || true
+      #    echo "Dysk po czyszczeniu:"
+      #    df -h
       # - name: 1. Pobranie bezpiecznego Dockerfile
       #  uses: actions/checkout@v4.2.2
       #  with:
@@ -54,7 +54,7 @@ jobs:
       # SZYBKI TEST: Ściągamy oryginalny, oficjalny obraz z Docker Hub zamiast budować go ręcznie
       - name: 2. Pobranie oryginalnego obrazu Linkwarden do testów potoku
         run: |
-          docker pull linkwarden/linkwarden:latest
+          docker pull ghcr.io/linkwarden/linkwarden:latest
 
       # Oznaczamy go Twoją nazwą rejestru i tagiem `:testing`, którego oczekuje Twój drugi plik (trivy.yml)
       - name: 3. Przemetkowanie i natychmiastowy push do GHCR
