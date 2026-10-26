@@ -59,6 +59,7 @@ jobs:
       # Oznaczamy go Twoją nazwą rejestru i tagiem `:testing`, którego oczekuje Twój drugi plik (trivy.yml)
       - name: 3. Przemetkowanie i natychmiastowy push do GHCR
         run: |
+          docker tag ghcr.io/linkwarden/linkwarden:latest ghcr.io/${{ github.repository_owner }}/linkwarden:patched
           docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
       # - name: 6. Budowanko
       #  uses: docker/build-push-action@v6.9.0
