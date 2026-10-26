@@ -6,10 +6,11 @@
 name: Trivy Security Scan
 
 on:
-  workflow_run:
-    workflows: ["Linkwarden personal docker build"] # MUSI pasować do 'name' z pierwszego pliku
-    types:
-      - completed # Uruchom, gdy tamten plik zakończy działanie
+  workflow_dispatch: # Tworzy wygodny przycisk do ręcznego uruchomienia
+  # workflow_run:
+  #  workflows: ["Linkwarden personal docker build"] # MUSI pasować do 'name' z pierwszego pliku
+  #  types:
+  #    - completed # Uruchom, gdy tamten plik zakończy działanie
 
 permissions:
   contents: read
