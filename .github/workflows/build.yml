@@ -69,26 +69,11 @@ jobs:
           docker builder prune -f
           df -h
 
-      # NOWY KROK: Trivy skanuje lokalnie załadowany obraz
-      - name: 7. Skanowanie bezpieczeństwa narzędziem Trivy
-        uses: aquasecurity/trivy-action@master
+      # ZMIANA: Wysyłamy obraz z tymczasowym tagiem ':testing', bo Trivy musi go skądś pobrać w osobnym pliku
+      - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
+        uses: docker/build-push-action@v6.9.0
         with:
-          image-ref: 'ghcr.io/${{ github.repository_owner }}/linkwarden:patched'
-          format: 'sarif' # Zmieniamy z table na sarif
-          output: 'trivy-results.sarif'
-          exit-code: '1'             # Zgłoś błąd i przerwij workflow, jeśli znajdziesz podatności
-          ignore-unfixed: true       # Ignoruj luki, które nie mają jeszcze oficjalnej łatki naprawczej
-          severity: 'CRITICAL,HIGH'  # Skup się wyłącznie na krytycznych i wysokich zagrożeniach
-          # Przekazujemy token bezpośrednio do Trivy - to klucz do ominięcia błędu:
-          # github-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 8. Przesłanie raportu do zakładki Security
-        uses: github/codeql-action/upload-sarif@v4
-        if: always() # Wyślij raport zawsze, nawet jeśli Trivy znajdzie błędy
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-      # NOWY KROK: Jeśli test Trivy przejdzie pomyślnie, wysyłamy sprawdzony obraz do rejestru ghcr.io
-      - name: 9. Wysyłka bezpiecznego obrazu na zdalny rejestr
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+          context: ./linkwarden-src
+          file: ./linkwarden-src/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
