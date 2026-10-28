@@ -80,13 +80,13 @@ jobs:
           df -h
 
       # ZMIANA: Wysyłamy obraz z tymczasowym tagiem ':testing', bo Trivy musi go skądś pobrać w osobnym pliku
-      # - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
-      #  uses: docker/build-push-action@v6.9.0
-      #  with:
-      #    context: ./linkwarden-src
-      #    file: ./linkwarden-src/Dockerfile
-      #    push: true
-      #    tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+      - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
+        uses: docker/build-push-action@v6.9.0
+        with:
+          context: ./linkwarden-src
+          file: ./linkwarden-src/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
   # NOWA SEKCJA: Jawne wywołanie drugiego pliku po zakończeniu zadania "build"
   # trigger-trivy:
   #  needs: build # Czekaj na zakończenie kompilacji obrazu tymczasowego
