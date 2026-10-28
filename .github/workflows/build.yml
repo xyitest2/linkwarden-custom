@@ -35,7 +35,7 @@ jobs:
       - name: 🔍 Pobranie informacji o najnowszej stabilnej wersji
         id: get_version
         run: |
-          LATEST_TAG=$(curl -s https://github.com | jq -r .tag_name)
+          LATEST_TAG=$(curl -s https://api.github.com/repos/linkwarden/linkwarden/releases/latest | jq -r .tag_name)
           echo "stable_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
           echo "Wykryto najnowszą stabilną wersję: $LATEST_TAG"
 
