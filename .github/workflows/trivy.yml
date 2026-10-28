@@ -31,10 +31,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # POBIERANIE WERSJI STABILNEJ: Dokładnie tak samo jak w pliku budującym, sprawdzamy tag, aby pobrać właściwy obraz
+      - name: 🔍 Pobranie informacji o skanowanej wersji stabilnej
+        id: get_version
+        run: |
+          LATEST_TAG=$(curl -s https://github.com | jq -r .tag_name)
+          echo "stable_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
       # Ponieważ ten workflow działa na ŚWIEŻEJ maszynie wirtualnej, musimy pobrać obraz, który przed chwilą zbudował pierwszy workflow
       - name: 2. Pobranie zbudowanego obrazu z GHCR cache
         run: |
           docker pull ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+          docker pull ghcr.io/${{ github.repository_owner }}/linkwarden:${{ steps.get_version.outputs.stable_tag }}
 
       - name: 3. Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe
@@ -55,3 +63,4 @@ jobs:
       - name: 9. Wysyłka bezpiecznego obrazu na zdalny rejestr
         run: |
           docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+          docker push ghcr.io/${{ github.repository_owner }}/linkwarden:${{ steps.get_version.outputs.stable_tag }}
