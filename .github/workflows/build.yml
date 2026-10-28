@@ -15,21 +15,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # KROK NAPRAWCZY 1: Usunięcie zbędnego oprogramowania i śmieci z runnera GitHub przed startem
-      # - name: 🛠️ Sprzątanko (kluczowe dla dużych obrazów)
-      #  run: |
-      #    echo "Dysk przed czyszczeniem:"
-      #    df -h
-      #    sudo rm -rf /usr/share/dotnet
-      #    sudo rm -rf /usr/local/lib/android
-      #    sudo rm -rf /opt/ghc
-      #    sudo rm -rf /opt/hostedtoolcache/CodeQL
-      #    sudo docker image prune --all --force || true
-      #    echo "Dysk po czyszczeniu:"
-      #    df -h
-      # - name: 1. Pobranie bezpiecznego Dockerfile
-      #  uses: actions/checkout@v4.2.2
-      #  with:
-      #    path: 'moje-repo' # Zapisuje Twoje pliki w osobnym podfolderze
+      - name: 🛠️ Sprzątanko (kluczowe dla dużych obrazów)
+        run: |
+          echo "Dysk przed czyszczeniem:"
+          df -h
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force || true
+          echo "Dysk po czyszczeniu:"
+          df -h
+      - name: 1. Pobranie bezpiecznego Dockerfile
+        uses: actions/checkout@v4.2.2
+        with:
+          path: 'moje-repo' # Zapisuje Twoje pliki w osobnym podfolderze
 
       # - name: 2. Pobranie kodu źródłowego Linkwardena
       #  uses: actions/checkout@v4.2.2
@@ -52,42 +52,43 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       # SZYBKI TEST: Ściągamy oryginalny, oficjalny obraz z Docker Hub zamiast budować go ręcznie
-      - name: 2. Pobranie oryginalnego obrazu Linkwarden do testów potoku
-        run: |
-          docker pull ghcr.io/linkwarden/linkwarden:latest
+      # - name: 2. Pobranie oryginalnego obrazu Linkwarden do testów potoku
+      #  run: |
+      #    docker pull ghcr.io/linkwarden/linkwarden:latest
 
       # Oznaczamy go Twoją nazwą rejestru i tagiem `:testing`, którego oczekuje Twój drugi plik (trivy.yml)
       - name: 3. Przemetkowanie i natychmiastowy push do GHCR
         run: |
           docker tag ghcr.io/linkwarden/linkwarden:latest ghcr.io/${{ github.repository_owner }}/linkwarden:patched
           docker push ghcr.io/${{ github.repository_owner }}/linkwarden:patched
-      # - name: 6. Budowanko
-      #  uses: docker/build-push-action@v6.9.0
-      #  with:
-      #    context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
-      #    file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
-      #    push: false
-      #    load: true
-      #    tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+
+      - name: 6. Budowanko
+        uses: docker/build-push-action@v6.9.0
+        with:
+          context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
+          file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
+          push: false
+          load: true
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
 
       # KROK NAPRAWCZY 2: Czyszczenie cache Buildx PRZED skanowaniem Trivy.
       # Buildx zostawia po sobie gigabajty danych tymczasowych. Musimy je usunąć,
       # aby Trivy miało miejsce na rozpakowanie warstw obrazu w /tmp.
-      # - name: 🧹 Pruning Docker Build Cache
-      #  run: |
-      #    docker builder prune -f
-      #    df -h
+      - name: 🧹 Pruning Docker Build Cache
+        run: |
+          docker builder prune -f
+          df -h
 
       # ZMIANA: Wysyłamy obraz z tymczasowym tagiem ':testing', bo Trivy musi go skądś pobrać w osobnym pliku
-      # - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
-      #  uses: docker/build-push-action@v6.9.0
-      #  with:
-      #    context: ./linkwarden-src
-      #    file: ./linkwarden-src/Dockerfile
-      #    push: true
-      #    tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+      - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
+        uses: docker/build-push-action@v6.9.0
+        with:
+          context: ./linkwarden-src
+          file: ./linkwarden-src/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
   # NOWA SEKCJA: Jawne wywołanie drugiego pliku po zakończeniu zadania "build"
-  trigger-trivy:
-    needs: build # Czekaj na zakończenie kompilacji obrazu tymczasowego
-    uses: ./.github/workflows/trivy.yml # Ścieżka lokalna do Twojego drugiego pliku
-    secrets: inherit # Przekaż uprawnienia i token GITHUB_TOKEN do drugiego pliku
+  # trigger-trivy:
+  #  needs: build # Czekaj na zakończenie kompilacji obrazu tymczasowego
+  #  uses: ./.github/workflows/trivy.yml # Ścieżka lokalna do Twojego drugiego pliku
+  #  secrets: inherit # Przekaż uprawnienia i token GITHUB_TOKEN do drugiego pliku
