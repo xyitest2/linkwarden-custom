@@ -18,6 +18,13 @@ ENV PRISMA_HIDE_UPDATE_MESSAGE=1
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 WORKDIR /data
 
+# Pełne łatowanie systemu na etapie budowania dla maksymalnego bezpieczeństwa pakietów deweloperskich
+RUN set -eux && \
+    apt-get update && \
+    apt-get upgrade -yqq && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN corepack enable
 
 # Copy only structure first for optimized caching
@@ -58,10 +65,11 @@ WORKDIR /data
 # Copy the Rust monolith binary
 COPY --from=monolith-builder /usr/local/cargo/bin/monolith /usr/local/bin/monolith
 
-# Install minimal runtime system utilities
+# Install minimal runtime system utilities + PEŁNY UPGRADE SYSTEMU DOBA PO DOBIE
 # procps provides `ps`, which concurrently -k needs to manage child processes
 RUN set -eux && \
     apt-get update && \
+    apt-get upgrade -yqq && \
     apt-get install -yqq --no-install-recommends curl ca-certificates openssl procps xz-utils && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -76,10 +84,11 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable && corepack install
 
 # Install only the Chromium headless shell (Playwright's smallest browser) plus
-# the shared libraries it needs at runtime. Full Chromium is not required.
+# the shared libraries it needs at runtime. Pełny upgrade przed pobraniem zależności przeglądarki.
 RUN set -eux && \
     export PATH=/data/node_modules/.bin:$PATH && \
     apt-get update && \
+    apt-get upgrade -yqq && \
     playwright install --with-deps chromium-headless-shell && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -91,7 +100,8 @@ ENV NODE_DIR="node-v22.23.4-linux-x64"
 
 # Pobranie paczki bezpośrednio z oficjalnych serwerów producenta i wyciągnięcie binaru node
 RUN curl -fsSL "${NODE_URL_BASE}/${NODE_FILE}" -o node.tar.xz && tar -xJf node.tar.xz && \
-    mv "${NODE_DIR}/bin/node" /usr/local/bin/node
+    mv "${NODE_DIR}/bin/node" /usr/local/bin/node && \
+    rm -rf node.tar.xz "${NODE_DIR}"
 
 # Next.js writes its image-optimizer cache here at runtime; precreate it as
 # world-writable so it also works when the container runs as a non-root user
