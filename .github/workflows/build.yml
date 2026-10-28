@@ -31,11 +31,19 @@ jobs:
         with:
           path: 'moje-repo' # Zapisuje Twoje pliki w osobnym podfolderze
 
+      # POBIERANIE WERSJI STABILNEJ: Odpytujemy API o oficjalny, najnowszy release tag
+      - name: 🔍 Pobranie informacji o najnowszej stabilnej wersji
+        id: get_version
+        run: |
+          LATEST_TAG=$(curl -s https://github.com | jq -r .tag_name)
+          echo "stable_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Wykryto najnowszą stabilną wersję: $LATEST_TAG"
+
       - name: 2. Pobranie kodu źródłowego Linkwardena
         uses: actions/checkout@v4.2.2
         with:
           repository: 'linkwarden/linkwarden'
-          ref: 'main'
+          ref: ${{ steps.get_version.outputs.stable_tag }} # Używamy bezpiecznego tagu zamiast 'main'
           path: 'linkwarden-src' # Zapisuje kod Linkwardena w osobnym podfolderze
 
       - name: 3. Przeniesienie bezpiecznego Dockerfile do kodu aplikacji
@@ -67,9 +75,11 @@ jobs:
         with:
           context: ./linkwarden-src # Budujemy obraz wewnątrz folderu z kodem aplikacji
           file: ./linkwarden-src/Dockerfile # Wskazujemy na nasz podmieniony plik
-          push: false
+          push: true
           load: true
-          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+            ghcr.io/${{ github.repository_owner }}/linkwarden:${{ steps.get_version.outputs.stable_tag }}
 
       # KROK NAPRAWCZY 2: Czyszczenie cache Buildx PRZED skanowaniem Trivy.
       # Buildx zostawia po sobie gigabajty danych tymczasowych. Musimy je usunąć,
@@ -80,13 +90,7 @@ jobs:
           df -h
 
       # ZMIANA: Wysyłamy obraz z tymczasowym tagiem ':testing', bo Trivy musi go skądś pobrać w osobnym pliku
-      - name: 7. Budowanie i wysyłka tymczasowego obrazu do testów
-        uses: docker/build-push-action@v6.9.0
-        with:
-          context: ./linkwarden-src
-          file: ./linkwarden-src/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository_owner }}/linkwarden:patched
+      # (KROK USUNIĘTY / SCALONY Z KROKIEM 6 DLA OPTYMALIZACJI CZASU I UNIKNIĘCIA PODWÓJNEGO BUDOWANIA)
   # NOWA SEKCJA: Jawne wywołanie drugiego pliku po zakończeniu zadania "build"
   # trigger-trivy:
   #  needs: build # Czekaj na zakończenie kompilacji obrazu tymczasowego
