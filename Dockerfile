@@ -2,8 +2,9 @@
 # Stage 1: Monolith Builder
 # ==============================================================================
 FROM docker.io/rust:1.96-bookworm AS monolith-builder
-ARG MONOLITH_VERSION=2.10.1
-RUN set -eux && cargo install --locked monolith@${MONOLITH_VERSION}
+# ARG MONOLITH_VERSION=2.10.1
+RUN set -eux && cargo install --locked monolith
+# @${MONOLITH_VERSION}
 
 # ==============================================================================
 # Stage 2: App Builder (Where the heavy building happens)
