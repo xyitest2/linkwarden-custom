@@ -39,7 +39,7 @@ COPY packages/router/package.json ./packages/router/
 COPY packages/types/package.json ./packages/types/
 
 # Install everything needed to build
-RUN sharing=locked,target=/root/.yarn/berry/cache \
+RUN --mount=type=cache,sharing=locked,target=/root/.yarn/berry/cache \
     yarn workspaces focus linkwarden @linkwarden/web @linkwarden/worker
 
 # Copy source and build
